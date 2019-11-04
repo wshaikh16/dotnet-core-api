@@ -1,0 +1,180 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "appName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the function app that you wish to create."
+      }
+    },
+    "appServicePlanName": {
+      "type": "string",
+      "metadata": {
+        "description": "App service plan - Name"
+      }
+    },
+    "appServicePlanSkuName": {
+      "type": "string",
+      "metadata": {
+        "description": "App service plan - Sku Name"
+      }
+    },
+    "appServicePlanSkuTier": {
+      "type": "string",
+      "metadata": {
+        "description": "App service plan - Sku Tier"
+      }
+    },
+    "appServicePlanSkuFamily": {
+      "type": "string",
+      "metadata": {
+        "description": "App service plan - Sku Family"
+      }
+    },
+    "appServicePlanNumberOfWorkers": {
+      "type": "int",
+      "metadata": {
+        "description": "App service plan - Worker count"
+      }
+    },
+    "appInsightsInstrumentationKey": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Application Insights instrumentation key"
+      }
+    },
+    "acrName": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure Container Registry Name"
+      }
+    },
+    "acrRepositoryName": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure Container Registry Repo Name"
+      }
+    },
+    "imageTagName": {
+      "type": "string",
+      "metadata": {
+        "description": "Image Tag Name"
+      }
+    }
+  },
+  "variables": {
+    "location": "[resourceGroup().location]",
+    "webApiAppName": "[parameters('appName')]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2016-09-01",
+      "name": "[parameters('appServicePlanName')]",
+      "location": "[variables('location')]",
+      "kind": "app,linux,container",
+      "sku": {
+        "name": "[parameters('appServicePlanSkuName')]",
+        "tier": "[parameters('appServicePlanSkuTier')]",
+        "size": "[parameters('appServicePlanSkuName')]",
+        "family": "[parameters('appServicePlanSkuFamily')]",
+        "capacity": "[parameters('appServicePlanNumberOfWorkers')]"
+      },
+      "properties": {
+        "name": "[parameters('appServicePlanName')]"
+      }
+    },
+    {
+      "apiVersion": "2018-02-01",
+      "type": "Microsoft.Web/sites",
+      "name": "[variables('webApiAppName')]",
+      "location": "[variables('location')]",
+      "kind": "app,linux,container",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms', parameters('appServicePlanName'))]"
+      ],
+      "properties": {
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('appServicePlanName'))]",
+        "siteConfig": {
+          "appCommandLine": "",
+          "appSettings": [
+            {
+              "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
+              "value": "[parameters('appInsightsInstrumentationKey')]"
+            },
+            {
+              "name": "DOCKER_REGISTRY_SERVER_URL",
+              "value": "https://index.docker.io"
+            },
+            {
+              "name": "DOCKER_REGISTRY_SERVER_USERNAME",
+              "value": ""
+            },
+            {
+              "name": "DOCKER_REGISTRY_SERVER_PASSWORD",
+              "value": ""
+            }
+          ]
+        }
+      },
+      "resources": [
+        {
+          "name": "web",
+          "type": "config",
+          "apiVersion": "2015-08-01",
+          "dependsOn": [
+            "[resourceId('Microsoft.Web/sites', variables('webApiAppName'))]"
+          ],
+          "tags": {
+            "displayName": "web"
+          },
+          "properties": {
+            "use32BitWorkerProcess": "false",
+            "alwaysOn": "true",
+            "netFrameworkVersion": "v4.0",
+            "phpVersion": "",
+            "pythonVersion": "",
+            "nodeVersion": "",
+            "windowsFxVersion": "",
+            "requestTracingEnabled": false,
+            "remoteDebuggingEnabled": false,
+            "httpLoggingEnabled": false,
+            "logsDirectorySizeLimit": 35,
+            "detailedErrorLoggingEnabled": false,
+            "scmType": "None",
+            "webSocketsEnabled": false,
+            "appCommandLine": "",
+            "managedPipelineMode": "Integrated",
+            "virtualApplications": [
+              {
+                "virtualPath": "/",
+                "physicalPath": "site\\wwwroot",
+                "preloadEnabled": false,
+                "virtualDirectories": null
+              }
+            ],
+            "winAuthAdminState": 0,
+            "winAuthTenantState": 0,
+            "customAppPoolIdentityAdminState": false,
+            "customAppPoolIdentityTenantState": false,
+            "loadBalancing": "LeastRequests",
+            "routingRules": [],
+            "experiments": {
+              "rampUpRules": []
+            },
+            "autoHealEnabled": false,
+            "vnetName": "",
+            "siteAuthEnabled": false,
+            "localMySqlEnabled": false,
+            "http20Enabled": false,
+            "minTlsVersion": "1.2",
+            "reservedInstanceCount": 0,
+            "fileChangeAuditEnabled": false,
+            "functionsRuntimeScaleMonitoringEnabled": false
+          }
+        }
+      ]
+    }
+  ]
+}
